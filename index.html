@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Control de plata — moto</title>
+<meta name="theme-color" content="#0B1220">
+<meta name="description" content="Control de ingresos, gastos y arriendo de moto para domicilios">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Control moto">
+<style>
+  @font-face{ font-family:"Poppins"; font-style:normal; font-weight:400; font-display:swap; src:url("fonts/poppins-400.woff2") format("woff2"); }
+  @font-face{ font-family:"Poppins"; font-style:normal; font-weight:500; font-display:swap; src:url("fonts/poppins-500.woff2") format("woff2"); }
+  @font-face{ font-family:"Poppins"; font-style:normal; font-weight:600; font-display:swap; src:url("fonts/poppins-600.woff2") format("woff2"); }
+  @font-face{ font-family:"Poppins"; font-style:normal; font-weight:700; font-display:swap; src:url("fonts/poppins-700.woff2") format("woff2"); }
+  @font-face{ font-family:"Space Mono"; font-style:normal; font-weight:400; font-display:swap; src:url("fonts/spacemono-400.woff2") format("woff2"); }
+  @font-face{ font-family:"Space Mono"; font-style:normal; font-weight:700; font-display:swap; src:url("fonts/spacemono-700.woff2") format("woff2"); }
+
+  :root{
+    color-scheme: dark;
+    --bg:#0B1220; --surface:#141B2E; --surface2:#1D2740; --border:#253048;
+    --text:#EAF0FF; --muted:#8593B8;
+    --cash:#34D399; --acct:#60A5FA; --pend:#FBBF24; --neg:#FB7185; --capital:#A78BFA;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0B1220; } }
+  :root[data-theme="dark"]{ --bg:#0B1220; }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{
+    margin:0; min-height:100%;
+    font-family:"Poppins","DejaVu Sans",sans-serif;
+    background:var(--bg); color:var(--text);
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .mono{ font-family:"Space Mono","DejaVu Sans Mono",monospace; }
+
+  .wrap{ max-width:480px; margin:0 auto; padding:18px 16px 120px; }
+
+  .top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .top .date{ font-size:13.5px; color:var(--muted); text-transform:capitalize; }
+  .iconbtn{
+    width:38px;height:38px;border-radius:11px;background:var(--surface);
+    border:1px solid var(--border); display:flex;align-items:center;justify-content:center;
+    font-size:17px; color:var(--text); cursor:pointer;
+  }
+
+  .hero{ text-align:center; padding:14px 0 22px; }
+  .hero .lbl{ font-size:13.5px; color:var(--muted); font-weight:500; }
+  .hero .amt{ font-size:min(13vw,52px); font-weight:700; margin-top:4px; letter-spacing:-1px; }
+  .hero .sub{ margin-top:8px; font-size:13.5px; color:var(--muted); }
+  .hero .sub b{ font-weight:700; }
+  .hero .sub b.c1{ color:var(--cash); } .hero .sub b.c2{ color:var(--acct); }
+  .hero .pending-link{ margin-top:10px; font-size:13px; font-weight:600; }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:16px 18px; margin-bottom:14px; }
+  .card .htitle{ font-size:14px; font-weight:600; color:#C7D2E8; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; }
+  .card .htitle .tot{ font-size:15px; font-weight:700; color:var(--pend); }
+  .card .empty{ font-size:13px; color:var(--muted); padding:8px 0 2px; }
+
+  .prow{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-top:1px solid var(--surface2); }
+  .prow:first-of-type{ border-top:none; }
+  .prow .pname{ font-size:14.5px; color:var(--text); font-weight:500; }
+  .prow .pcut{ font-size:12px; color:var(--muted); margin-top:1px; }
+  .prow .pamt{ font-size:16px; font-weight:700; }
+
+  .rentbar{ height:8px; border-radius:6px; background:var(--surface2); margin:6px 0 10px; overflow:hidden; }
+  .rentbar .fill{ height:100%; background:var(--neg); transition:width .25s; }
+  .rentrow{ display:flex; justify-content:space-between; align-items:baseline; font-size:13.5px; color:var(--muted); }
+  .rentrow b{ color:var(--neg); font-size:16px; }
+  .rentrow.ok b{ color:var(--cash); }
+  .rentbtns{ display:flex; gap:10px; margin-top:12px; }
+  .rentbtns button{ flex:1; background:var(--surface2); border:1px solid #2C3A5C; color:var(--text); border-radius:12px; padding:10px 6px; font-size:12.8px; font-weight:600; font-family:inherit; }
+
+  .profitcard{ display:flex; justify-content:space-between; align-items:center; }
+  .profitcard .htitle{ margin-bottom:0; }
+  .profitcard .pv{ font-size:19px; font-weight:700; }
+
+  .sectiontitle{ font-size:14px; color:var(--muted); margin:20px 2px 10px; font-weight:600; }
+  .hintline{ font-size:12px; color:var(--muted); margin:-6px 2px 14px; }
+
+  .entrylist .card{ padding:4px 10px 4px 18px; }
+  .entry{ display:flex; align-items:center; gap:10px; padding:11px 0; border-top:1px solid var(--surface2); overflow:hidden; }
+  .entry:first-of-type{ border-top:none; }
+  .entry .ic{ width:38px;height:38px;border-radius:11px; display:flex;align-items:center;justify-content:center; font-size:17px; flex-shrink:0; }
+  .entry .ic.in{ background:rgba(52,211,153,0.15); }
+  .entry .ic.out{ background:rgba(251,113,133,0.15); }
+  .entry .ic.pend{ background:rgba(251,191,36,0.15); }
+  .entry .ic.neu{ background:rgba(96,165,250,0.15); }
+  .entry .meta{ flex:1; min-width:0; cursor:pointer; }
+  .entry .t1{ font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .entry .t2{ font-size:12px; color:var(--muted); margin-top:1px; }
+  .entry .rightcol{ display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+  .entry .amt{ font-size:14.5px; font-weight:700; white-space:nowrap; cursor:pointer; }
+  .entry .amt.pos{ color:var(--cash); } .entry .amt.negv{ color:var(--neg); }
+  .entry .amt.pendv{ color:var(--pend); } .entry .amt.neuv{ color:var(--acct); }
+  .entry .trash{ background:none; border:none; color:#4B5875; font-size:14px; padding:5px 8px; border-radius:8px; }
+  .entry .trash.confirming{ color:#fff; background:var(--neg); font-weight:700; font-size:11px; padding:5px 8px; }
+
+  .empty-state{ text-align:center; color:var(--muted); font-size:14px; padding:30px 10px; }
+
+  .fab{
+    position:fixed; left:16px; right:16px; bottom:calc(18px + env(safe-area-inset-bottom,0px));
+    max-width:448px; margin:0 auto; z-index:20;
+    background:var(--acct); color:#04162F; border:none; border-radius:16px; padding:16px;
+    font-family:inherit; font-size:15.5px; font-weight:700; text-align:center;
+    box-shadow:0 8px 20px rgba(96,165,250,0.25);
+  }
+
+  .overlay{ position:fixed; inset:0; background:rgba(3,7,18,0.6); z-index:30;
+    opacity:0; visibility:hidden; transition:opacity .22s ease, visibility 0s linear .22s; }
+  .overlay.show{ opacity:1; visibility:visible; transition:opacity .22s ease; }
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:31; max-width:480px; margin:0 auto;
+    background:var(--surface); border-top-left-radius:22px; border-top-right-radius:22px;
+    border:1px solid var(--border); border-bottom:none;
+    padding:18px 18px calc(20px + env(safe-area-inset-bottom,0px));
+    transform:translateY(100%); transition:transform .32s cubic-bezier(.16,1,.3,1); max-height:88vh; overflow-y:auto;
+  }
+  .sheet.show{ transform:translateY(0); }
+  .sheet h3{ font-size:17px; font-weight:700; margin:0 0 14px; }
+  .grabber{ width:36px;height:4px;background:var(--surface2); border-radius:4px; margin:0 auto 14px; }
+
+  .tabs{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:16px; }
+  .tab{ flex-shrink:0; background:var(--surface2); border:1px solid var(--border); color:var(--muted);
+    border-radius:100px; padding:9px 15px; font-size:13px; font-weight:600; font-family:inherit; white-space:nowrap; }
+  .tab.active{ background:var(--acct); color:#04162F; border-color:var(--acct); }
+
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12.5px; color:var(--muted); margin-bottom:6px; font-weight:500; }
+  .field input[type=number], .field input[type=text], .field select{
+    width:100%; background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    border-radius:12px; padding:12px 13px; font-size:15px; font-family:inherit;
+  }
+  .field input::placeholder{ color:#5A6786; }
+  .toggle2{ display:flex; gap:8px; }
+  .toggle3{ display:flex; gap:8px; flex-wrap:wrap; }
+  .toggle2 button, .toggle3 button{ flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--muted);
+    border-radius:12px; padding:12px 8px; font-size:13px; font-weight:600; font-family:inherit; min-width:120px; }
+  .toggle2 button.active, .toggle3 button.active{ background:var(--acct); color:#04162F; border-color:var(--acct); }
+  .hint{ font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.4; }
+
+  .savebtn{ width:100%; background:var(--cash); color:#04231A; border:none; border-radius:14px;
+    padding:15px; font-size:15.5px; font-weight:700; font-family:inherit; margin-top:6px; }
+  .deletebtn{ width:100%; background:rgba(251,113,133,0.12); color:var(--neg); border:1px solid rgba(251,113,133,0.35); border-radius:14px;
+    padding:13px; font-size:14px; font-weight:700; font-family:inherit; margin-top:10px; }
+  .deletebtn.confirming{ background:var(--neg); color:#fff; }
+  .rentbtns button.confirming{ background:var(--neg); color:#fff; border-color:var(--neg); }
+  .plat-row .del.confirming{ color:#fff; background:var(--neg); border-radius:8px; }
+  .cancelbtn{ width:100%; background:transparent; color:var(--muted); border:none; padding:12px; font-size:14px; font-family:inherit; margin-top:2px; }
+
+  .plat-row{ display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+  .plat-row input[type=text]{ flex:1.4; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:9px 10px; font-size:13.5px; font-family:inherit; }
+  .plat-row select{ flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:9px 6px; font-size:12.5px; font-family:inherit; }
+  .plat-row .del{ background:none;border:none;color:var(--neg);font-size:17px;padding:4px 6px; }
+  .addplat{ display:flex; gap:8px; margin-top:10px; }
+  .addplat input{ flex:1.4; } .addplat select{ flex:1; }
+  .addplat button{ background:var(--acct); border:none; color:#04162F; border-radius:10px; padding:0 14px; font-weight:700; font-family:inherit; }
+
+  .toast{
+    position:fixed; left:50%; bottom:96px; transform:translateX(-50%); z-index:40;
+    background:#1D2740; border:1px solid var(--border); color:var(--text);
+    padding:11px 18px; border-radius:100px; font-size:13.5px; font-weight:600;
+    opacity:0; transition:opacity .2s; pointer-events:none; max-width:85vw; text-align:center;
+  }
+  .toast.show{ opacity:1; }
+
+  .nodb{ text-align:center; padding:60px 24px; color:var(--muted); font-size:14px; line-height:1.6; }
+
+  .howto{ background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:12px 14px; font-size:12.5px; color:var(--muted); line-height:1.5; margin-bottom:14px; }
+  .howto b{ color:var(--text); }
+
+  /* ---------- toque y movimiento: que se sienta nativa ---------- */
+  @media (prefers-reduced-motion: no-preference){
+    .fab, .iconbtn, .savebtn, .deletebtn, .cancelbtn, .rentbtns button,
+    .toggle2 button, .toggle3 button, .tab, .addplat button, .trash, .del{
+      transition: transform .12s cubic-bezier(.4,0,.2,1), filter .12s ease, background-color .15s ease, color .15s ease, border-color .15s ease;
+    }
+    .fab:active, .savebtn:active, .deletebtn:active, .rentbtns button:active,
+    .addplat button:active{ transform:scale(.965); filter:brightness(.93); }
+    .iconbtn:active, .toggle2 button:active, .toggle3 button:active, .tab:active,
+    .trash:active, .del:active, .cancelbtn:active{ transform:scale(.92); filter:brightness(.9); }
+    .prow, .entry{ transition: background-color .2s ease; }
+  }
+
+  .entry.entry-new{ animation:entryIn .28s cubic-bezier(.16,1,.3,1) both; }
+  .entry.entry-exit{ animation:entryOut .2s cubic-bezier(.4,0,1,1) both; }
+  @keyframes entryIn{
+    from{ opacity:0; transform:translateY(-8px) scale(.98); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  @keyframes entryOut{
+    from{ opacity:1; transform:translateX(0) scale(1); max-height:80px; }
+    to{ opacity:0; transform:translateX(24px) scale(.97); max-height:0; padding-top:0; padding-bottom:0; }
+  }
+
+  .hero .amt{ transition:transform .18s cubic-bezier(.34,1.4,.64,1); display:inline-block; }
+  .hero .amt.pulse{ transform:scale(1.055); }
+
+  @media (prefers-reduced-motion: reduce){
+    .entry.entry-new, .entry.entry-exit{ animation:none; }
+    .hero .amt{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="wrap" id="app">
+    <div class="top">
+      <div class="date mono" id="todayLabel">—</div>
+      <div class="iconbtn" id="settingsBtn">⚙️</div>
+    </div>
+
+    <div class="hero">
+      <div class="lbl">tienes ahora mismo</div>
+      <div class="amt mono" id="heroAmt">$0</div>
+      <div class="sub"><b class="c1 mono" id="heroCash">$0</b> efectivo · <b class="c2 mono" id="heroAcct">$0</b> cuenta</div>
+      <div class="pending-link mono" id="heroPending"></div>
+    </div>
+
+    <div class="card">
+      <div class="htitle">Saldo con las apps <span class="tot mono" id="pendTotal">$0</span></div>
+      <div id="pendList"><div class="empty">Aún no tienes nada pendiente.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="htitle">Deuda de arriendo</div>
+      <div class="rentbar"><div class="fill" id="rentFill" style="width:0%"></div></div>
+      <div class="rentrow" id="rentRow">debes <b class="mono" id="rentDebt">$0</b></div>
+      <div class="rentbtns">
+        <button id="rentQuotaBtn">+ Cuota del día</button>
+        <button id="rentPayBtn">Registrar pago</button>
+      </div>
+    </div>
+
+    <div class="card profitcard">
+      <div class="htitle">Ganancia neta<br><span style="font-weight:400;font-size:11.5px;color:var(--muted);">ingresos − comisiones − gastos − arriendo</span></div>
+      <div class="pv mono" id="profitAmt">$0</div>
+    </div>
+
+    <div class="sectiontitle">Movimientos</div>
+    <div class="hintline">Toca un movimiento para editarlo, o el 🗑 para borrarlo.</div>
+    <div class="entrylist" id="entryList">
+      <div class="card"><div class="empty-state">Todavía no has registrado nada.<br>Toca "Registrar movimiento" para empezar.</div></div>
+    </div>
+  </div>
+
+  <button class="fab" id="fabBtn">+ Registrar movimiento</button>
+
+  <!-- Entry sheet (create + edit) -->
+  <div class="overlay" id="overlay"></div>
+  <div class="sheet" id="sheet">
+    <div class="grabber"></div>
+    <h3 id="sheetTitle">Registrar movimiento</h3>
+    <div class="tabs" id="typeTabs">
+      <button class="tab" data-type="ingreso">Viaje / pedido</button>
+      <button class="tab" data-type="gasto">Gasto</button>
+      <button class="tab" data-type="transferencia">Mover plata</button>
+      <button class="tab" data-type="cobro_plataforma">Cobré un pago</button>
+      <button class="tab" data-type="ajuste">Saldo con la app</button>
+    </div>
+    <div id="formFields"></div>
+    <button class="savebtn" id="saveBtn">Guardar</button>
+    <button class="deletebtn" id="deleteInSheetBtn" style="display:none;">Eliminar este movimiento</button>
+    <button class="cancelbtn" id="cancelBtn">Cancelar</button>
+  </div>
+
+  <!-- Rent pay sheet -->
+  <div class="overlay" id="overlayRent"></div>
+  <div class="sheet" id="sheetRent">
+    <div class="grabber"></div>
+    <h3>Registrar pago de arriendo</h3>
+    <div class="field"><label>Monto pagado</label><input type="number" id="rentPayAmt" placeholder="0" inputmode="numeric"></div>
+    <div class="field"><label>¿Con qué pagaste?</label>
+      <div class="toggle2" id="rentPayMethod">
+        <button class="active" data-v="efectivo">Efectivo</button>
+        <button data-v="cuenta">Cuenta / Nequi</button>
+      </div>
+    </div>
+    <button class="savebtn" id="rentPaySave">Guardar pago</button>
+    <button class="cancelbtn" id="rentPayCancel">Cancelar</button>
+  </div>
+
+  <!-- Settings sheet -->
+  <div class="overlay" id="overlaySettings"></div>
+  <div class="sheet" id="sheetSettings">
+    <div class="grabber"></div>
+    <h3>Ajustes</h3>
+
+    <div class="howto">
+      <b>Dónde vive tu información:</b> todo queda guardado en este mismo celular (en el almacenamiento local del navegador o de la app), no en ninguna nube. Funciona sin internet. Por lo mismo, no se comparte sola entre tu celular y otro dispositivo — si algún día cambias de teléfono, usa "Exportar respaldo" antes para no perder el historial.
+    </div>
+
+    <div class="field"><label>Arriendo diario por defecto</label><input type="number" id="dailyRentInput" placeholder="35000" inputmode="numeric"></div>
+
+    <div class="field">
+      <label>Plataformas</label>
+      <div id="platformEditList"></div>
+      <div class="addplat">
+        <input type="text" id="newPlatName" placeholder="Nombre (ej. Rappi)">
+        <select id="newPlatCutoff">
+          <option value="">Sin corte fijo</option>
+          <option value="lunes">Corte lunes</option>
+          <option value="martes">Corte martes</option>
+          <option value="miércoles">Corte miércoles</option>
+          <option value="jueves">Corte jueves</option>
+          <option value="viernes">Corte viernes</option>
+          <option value="sábado">Corte sábado</option>
+          <option value="domingo">Corte domingo</option>
+        </select>
+        <button id="addPlatBtn">+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Capital propio que metiste (no es ganancia)</label>
+      <div class="toggle2" style="margin-bottom:8px;" id="capMethod">
+        <button class="active" data-v="efectivo">Efectivo</button>
+        <button data-v="cuenta">Cuenta / Nequi</button>
+      </div>
+      <input type="number" id="capAmt" placeholder="Monto" inputmode="numeric">
+      <div class="hint">Úsalo una vez, cuando metas plata propia de tu bolsillo (ej. tu caja inicial de 50.000). No cuenta como ganancia.</div>
+      <button class="savebtn" id="capSaveBtn" style="margin-top:10px;background:var(--capital);color:#1A0E36;">Registrar capital</button>
+    </div>
+
+    <div class="field">
+      <button class="savebtn" id="exportBtn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);">⬇️ Exportar respaldo (.csv)</button>
+    </div>
+
+    <button class="cancelbtn" id="settingsCloseBtn">Cerrar</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script src="storage.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var db = null, downloads = null;
+  var platforms = []; // {id, name, cutoffDay}
+  var entries = [];   // all entries desc by ts
+  var settings = { dailyRent: 35000 };
+  var settingsDocReady = false;
+  var knownEntryIds = {}; // ids ya animados de entrada, para no repetir la animación en cada render
+  var lastHeroTotal = null;
+
+  var fmtNum = function(n){
+    n = Math.round(n || 0);
+    var neg = n < 0; n = Math.abs(n);
+    var s = n.toLocaleString("es-CO");
+    return (neg ? "-$" : "$") + s;
+  };
+
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove("show"); }, 2400);
+  }
+
+  // Two-tap confirm that doesn't depend on window.confirm (unreliable in some
+  // embedded webviews). First tap arms the button and shows confirmLabel;
+  // a second tap within the window runs the action; otherwise it reverts.
+  function armConfirm(el, idleLabel, confirmLabel, onConfirm){
+    var timer = null, armed = false;
+    el.textContent = idleLabel;
+    el.classList.remove("confirming");
+    el.onclick = function(ev){
+      if (ev) ev.stopPropagation();
+      if (!armed) {
+        armed = true;
+        el.textContent = confirmLabel;
+        el.classList.add("confirming");
+        timer = setTimeout(function(){
+          armed = false; el.textContent = idleLabel; el.classList.remove("confirming");
+        }, 2800);
+      } else {
+        armed = false; clearTimeout(timer);
+        onConfirm();
+      }
+    };
+  }
+
+  function todayLabel(){
+    var d = new Date();
+    var s = new Intl.DateTimeFormat("es-CO", {weekday:"long", day:"numeric", month:"long"}).format(d);
+    document.getElementById("todayLabel").textContent = "hoy, " + s;
+  }
+  todayLabel();
+
+  // ---------- computed summary ----------
+  function computeSummary(){
+    var cash = 0, account = 0, pendingByPlatform = {}, rentAccrued = 0, rentPaid = 0;
+    var incomeGross = 0, commission = 0, expenses = 0;
+    platforms.forEach(function(p){ pendingByPlatform[p.id] = 0; });
+
+    entries.forEach(function(e){
+      switch(e.type){
+        case "capital":
+          if (e.method === "efectivo") cash += e.amount; else account += e.amount;
+          break;
+        case "ingreso":
+          incomeGross += e.amount;
+          if (e.method === "efectivo") {
+            cash += e.amount;
+            if (e.commission) {
+              commission += e.commission;
+              pendingByPlatform[e.platformId] = (pendingByPlatform[e.platformId] || 0) - e.commission;
+            }
+          } else {
+            pendingByPlatform[e.platformId] = (pendingByPlatform[e.platformId] || 0) + e.amount;
+          }
+          break;
+        case "gasto":
+          expenses += e.amount;
+          if (e.method === "efectivo") cash -= e.amount; else account -= e.amount;
+          break;
+        case "arriendo_cuota":
+          rentAccrued += e.amount;
+          break;
+        case "arriendo_pago":
+          rentPaid += e.amount;
+          if (e.method === "efectivo") cash -= e.amount; else account -= e.amount;
+          break;
+        case "transferencia":
+          if (e.direction === "efectivo_a_cuenta") { cash -= e.amount; account += e.amount; }
+          else { account -= e.amount; cash += e.amount; }
+          break;
+        case "cobro_plataforma":
+          pendingByPlatform[e.platformId] = (pendingByPlatform[e.platformId] || 0) - e.amount;
+          if (e.method === "efectivo") cash += e.amount; else account += e.amount;
+          break;
+        case "ajuste":
+          if (e.direction === "debo_yo") {
+            pendingByPlatform[e.platformId] = (pendingByPlatform[e.platformId] || 0) - e.amount;
+            commission += e.amount;
+          } else {
+            pendingByPlatform[e.platformId] = (pendingByPlatform[e.platformId] || 0) + e.amount;
+            incomeGross += e.amount;
+          }
+          break;
+      }
+    });
+
+    var pendingTotal = 0;
+    Object.keys(pendingByPlatform).forEach(function(k){ pendingTotal += pendingByPlatform[k]; });
+    var rentDebt = rentAccrued - rentPaid;
+    var netProfit = incomeGross - commission - expenses - rentPaid;
+
+    return { cash: cash, account: account, pendingByPlatform: pendingByPlatform, pendingTotal: pendingTotal,
+             rentAccrued: rentAccrued, rentPaid: rentPaid, rentDebt: rentDebt, netProfit: netProfit };
+  }
+
+  function platformName(id){
+    var p = platforms.find(function(x){ return x.id === id; });
+    return p ? p.name : "Plataforma";
+  }
+  function platformCutoff(id){
+    var p = platforms.find(function(x){ return x.id === id; });
+    return p && p.cutoffDay ? p.cutoffDay : "";
+  }
+
+  // ---------- render ----------
+  function render(){
+    var s = computeSummary();
+
+    var heroTotal = s.cash + s.account;
+    var heroEl = document.getElementById("heroAmt");
+    heroEl.textContent = fmtNum(heroTotal);
+    if (lastHeroTotal !== null && heroTotal !== lastHeroTotal) {
+      heroEl.classList.remove("pulse"); void heroEl.offsetWidth; heroEl.classList.add("pulse");
+      setTimeout(function(){ heroEl.classList.remove("pulse"); }, 180);
+    }
+    lastHeroTotal = heroTotal;
+    document.getElementById("heroCash").textContent = fmtNum(s.cash);
+    document.getElementById("heroAcct").textContent = fmtNum(s.account);
+    var hp = document.getElementById("heroPending");
+    if (s.pendingTotal > 0) { hp.textContent = "+ " + fmtNum(s.pendingTotal) + " por cobrar en apps"; hp.style.color = "var(--pend)"; }
+    else if (s.pendingTotal < 0) { hp.textContent = fmtNum(s.pendingTotal) + " — les debes a las apps"; hp.style.color = "var(--neg)"; }
+    else { hp.textContent = ""; }
+
+    document.getElementById("pendTotal").textContent = fmtNum(s.pendingTotal);
+    document.getElementById("pendTotal").style.color = s.pendingTotal < 0 ? "var(--neg)" : "var(--pend)";
+    var pendList = document.getElementById("pendList");
+    var rows = platforms.filter(function(p){ return (s.pendingByPlatform[p.id]||0) !== 0; });
+    if (rows.length === 0) {
+      pendList.innerHTML = '<div class="empty">Todo en cero con las apps.</div>';
+    } else {
+      pendList.innerHTML = rows.map(function(p){
+        var amt = s.pendingByPlatform[p.id] || 0;
+        var sub, cls;
+        if (amt >= 0) { sub = p.cutoffDay ? ("se paga " + p.cutoffDay) : "sin corte fijo"; cls = "pend"; }
+        else { sub = "les debes"; cls = "negv"; }
+        return '<div class="prow"><div><div class="pname">'+esc(p.name)+'</div><div class="pcut">'+esc(sub)+'</div></div><div class="pamt mono" style="color:var(--'+(cls==='negv'?'neg':'pend')+')">'+fmtNum(amt)+'</div></div>';
+      }).join("");
+    }
+
+    var pct = s.rentAccrued > 0 ? Math.max(0, Math.min(100, (s.rentDebt / s.rentAccrued) * 100)) : 0;
+    document.getElementById("rentFill").style.width = pct + "%";
+    var rentRow = document.getElementById("rentRow");
+    if (s.rentDebt > 0) {
+      rentRow.className = "rentrow";
+      rentRow.innerHTML = 'debes <b class="mono">'+fmtNum(s.rentDebt)+'</b>';
+    } else {
+      rentRow.className = "rentrow ok";
+      rentRow.innerHTML = 'al día <b class="mono">'+fmtNum(0)+'</b>';
+    }
+
+    document.getElementById("profitAmt").textContent = fmtNum(s.netProfit);
+    document.getElementById("profitAmt").style.color = s.netProfit >= 0 ? "var(--cash)" : "var(--neg)";
+
+    renderEntries();
+  }
+
+  function esc(str){
+    var d = document.createElement("div"); d.textContent = str == null ? "" : String(str); return d.innerHTML;
+  }
+
+  function dayGroupLabel(ts){
+    var d = new Date(ts);
+    var now = new Date();
+    var startOfDay = function(x){ var y = new Date(x); y.setHours(0,0,0,0); return y.getTime(); };
+    var diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+    if (diffDays === 0) return "Hoy";
+    if (diffDays === 1) return "Ayer";
+    return new Intl.DateTimeFormat("es-CO", {weekday:"short", day:"numeric", month:"short"}).format(d);
+  }
+
+  function capitalize(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+
+  function entryDisplay(e){
+    var ic = "🧾", cls = "neu", t1 = "", t2 = "", amtCls = "neuv", amtTxt = "";
+    if (e.type === "ingreso") {
+      t1 = platformName(e.platformId) + " · viaje";
+      if (e.method === "efectivo") {
+        ic = "💵"; cls = "in"; amtCls = "pos"; amtTxt = "+" + fmtNum(e.amount);
+        t2 = e.commission ? ("Efectivo · comisión " + fmtNum(e.commission)) : "Efectivo";
+      } else {
+        ic = "⏳"; cls = "pend"; amtCls = "pendv"; amtTxt = "+" + fmtNum(e.amount);
+        t2 = "Pendiente" + (platformCutoff(e.platformId) ? (" · se paga " + platformCutoff(e.platformId)) : "");
+      }
+    } else if (e.type === "gasto") {
+      var catIcons = {gasolina:"⛽", personal:"🍔", mantenimiento:"🔧", otro:"🧾"};
+      ic = catIcons[e.category] || "🧾"; cls = "out"; amtCls = "negv"; amtTxt = "-" + fmtNum(e.amount);
+      t1 = capitalize(e.category || "Gasto");
+      t2 = e.method === "efectivo" ? "Efectivo" : "Cuenta / Nequi";
+    } else if (e.type === "arriendo_cuota") {
+      ic = "🧾"; cls = "neu"; amtCls = "neuv"; amtTxt = fmtNum(e.amount) + " deuda";
+      t1 = "Cuota de arriendo generada"; t2 = "No es un pago, es lo que debes";
+    } else if (e.type === "arriendo_pago") {
+      ic = "🏍️"; cls = "out"; amtCls = "negv"; amtTxt = "-" + fmtNum(e.amount);
+      t1 = "Pago de arriendo"; t2 = e.method === "efectivo" ? "Efectivo" : "Cuenta / Nequi";
+    } else if (e.type === "transferencia") {
+      ic = "🔁"; cls = "neu"; amtCls = "neuv"; amtTxt = fmtNum(e.amount);
+      t1 = e.direction === "efectivo_a_cuenta" ? "Moviste efectivo → cuenta" : "Moviste cuenta → efectivo";
+      t2 = "Movimiento interno";
+    } else if (e.type === "cobro_plataforma") {
+      ic = "🏦"; cls = "in"; amtCls = "pos"; amtTxt = "+" + fmtNum(e.amount);
+      t1 = "Cobraste de " + platformName(e.platformId);
+      t2 = "Llegó a " + (e.method === "efectivo" ? "efectivo" : "cuenta / Nequi");
+    } else if (e.type === "capital") {
+      ic = "🌱"; cls = "in"; amtCls = "pos"; amtTxt = "+" + fmtNum(e.amount);
+      t1 = "Capital propio"; t2 = e.method === "efectivo" ? "Efectivo" : "Cuenta / Nequi";
+    } else if (e.type === "ajuste") {
+      ic = "⚖️";
+      if (e.direction === "debo_yo") {
+        cls = "out"; amtCls = "negv"; amtTxt = "-" + fmtNum(e.amount);
+        t1 = "Le debes a " + platformName(e.platformId);
+      } else {
+        cls = "in"; amtCls = "pos"; amtTxt = "+" + fmtNum(e.amount);
+        t1 = platformName(e.platformId) + " te debe de más";
+      }
+      t2 = e.note ? e.note : "Ajuste de saldo";
+    }
+    return {ic:ic, cls:cls, t1:t1, t2:t2, amtCls:amtCls, amtTxt:amtTxt};
+  }
+
+  function renderEntries(){
+    var list = document.getElementById("entryList");
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="card"><div class="empty-state">Todavía no has registrado nada.<br>Toca "Registrar movimiento" para empezar.</div></div>';
+      return;
+    }
+    var groups = [];
+    var lastLabel = null, curGroup = null;
+    entries.forEach(function(e){
+      var lbl = dayGroupLabel(e.ts);
+      if (lbl !== lastLabel) { curGroup = {label: lbl, items: []}; groups.push(curGroup); lastLabel = lbl; }
+      curGroup.items.push(e);
+    });
+    var html = "";
+    groups.forEach(function(g){
+      html += '<div class="sectiontitle">'+esc(g.label)+'</div><div class="card">';
+      html += g.items.map(function(e){
+        var d = entryDisplay(e);
+        var isNew = !knownEntryIds[e.id];
+        return '<div class="entry'+(isNew?' entry-new':'')+'">'+
+          '<div class="ic '+d.cls+'" data-open="'+e.id+'">'+d.ic+'</div>'+
+          '<div class="meta" data-open="'+e.id+'"><div class="t1">'+esc(d.t1)+'</div><div class="t2">'+esc(d.t2)+'</div></div>'+
+          '<div class="rightcol">'+
+            '<div class="amt '+d.amtCls+' mono" data-open="'+e.id+'">'+d.amtTxt+'</div>'+
+            '<button class="trash" data-del="'+e.id+'">🗑</button>'+
+          '</div>'+
+        '</div>';
+      }).join("");
+      html += "</div>";
+    });
+    list.innerHTML = html;
+    var stillPresent = {};
+    entries.forEach(function(e){ knownEntryIds[e.id] = true; stillPresent[e.id] = true; });
+    Object.keys(knownEntryIds).forEach(function(id){ if (!stillPresent[id]) delete knownEntryIds[id]; });
+    list.querySelectorAll("[data-open]").forEach(function(elm){
+      elm.addEventListener("click", function(){
+        var id = elm.getAttribute("data-open");
+        var entry = entries.find(function(e){ return e.id === id; });
+        if (entry) openSheet(entry);
+      });
+    });
+    list.querySelectorAll("[data-del]").forEach(function(elm){
+      var id = elm.getAttribute("data-del");
+      armConfirm(elm, "🗑", "¿Seguro?", function(){ deleteEntry(id); });
+    });
+  }
+
+  function deleteEntry(id){
+    if (!db) return;
+    haptic([10,30,10]);
+    var nodes = [];
+    try { nodes = document.querySelectorAll('.entry:has([data-del="'+id+'"])'); } catch (e) { nodes = []; }
+    var animated = nodes.length > 0;
+    nodes.forEach(function(n){ n.classList.add("entry-exit"); });
+
+    var doDelete = function(){
+      db.collection("entries").doc(id).delete().then(function(){
+        toast("Movimiento eliminado");
+        closeSheet();
+      }).catch(function(){ toast("No se pudo eliminar"); });
+    };
+    if (animated) setTimeout(doDelete, 170); else doDelete();
+  }
+
+  // ---------- entry sheet (create + edit) ----------
+  var overlay = document.getElementById("overlay");
+  var sheet = document.getElementById("sheet");
+  var currentType = "ingreso";
+  var editingId = null;
+  var formState = {};
+
+  function openSheet(entry){
+    editingId = entry ? entry.id : null;
+    currentType = entry ? entry.type : "ingreso";
+    document.getElementById("sheetTitle").textContent = editingId ? "Editar movimiento" : "Registrar movimiento";
+    document.getElementById("typeTabs").style.display = editingId ? "none" : "";
+    document.getElementById("deleteInSheetBtn").style.display = editingId ? "" : "none";
+    document.getElementById("saveBtn").textContent = editingId ? "Guardar cambios" : "Guardar";
+    overlay.classList.add("show"); sheet.classList.add("show");
+    renderTypeTabs();
+    renderForm(entry || null);
+  }
+  function closeSheet(){
+    overlay.classList.remove("show"); sheet.classList.remove("show");
+    editingId = null;
+  }
+  document.getElementById("fabBtn").addEventListener("click", function(){ haptic(12); openSheet(null); });
+  overlay.addEventListener("click", closeSheet);
+  document.getElementById("cancelBtn").addEventListener("click", closeSheet);
+  armConfirm(document.getElementById("deleteInSheetBtn"), "Eliminar este movimiento", "¿Seguro? toca de nuevo", function(){
+    if (editingId) deleteEntry(editingId);
+  });
+
+  function renderTypeTabs(){
+    document.querySelectorAll("#typeTabs .tab").forEach(function(btn){
+      btn.classList.toggle("active", btn.getAttribute("data-type") === currentType);
+      btn.onclick = function(){ haptic(8); currentType = btn.getAttribute("data-type"); renderTypeTabs(); renderForm(null); };
+    });
+  }
+
+  function platformOptions(selectedId){
+    return platforms.map(function(p){
+      return '<option value="'+p.id+'"'+(p.id===selectedId?" selected":"")+'>'+esc(p.name)+'</option>';
+    }).join("");
+  }
+
+  function toggleHtml(id, options, current){
+    return '<div class="toggle2" id="'+id+'">' + options.map(function(o){
+      return '<button data-v="'+o.v+'"'+(o.v===current?' class="active"':'')+'>'+o.label+'</button>';
+    }).join("") + '</div>';
+  }
+
+  function renderForm(p){
+    var el = document.getElementById("formFields");
+    var amt = p ? p.amount : "";
+
+    if (currentType === "ingreso") {
+      var method = p ? p.method : "efectivo";
+      formState = {method: method};
+      el.innerHTML =
+        '<div class="field"><label>Plataforma</label><select id="f_platform">'+platformOptions(p ? p.platformId : (platforms[0] && platforms[0].id))+'</select></div>'+
+        '<div class="field"><label>Monto total cobrado</label><input type="number" id="f_amount" value="'+esc(amt)+'" placeholder="0" inputmode="numeric"></div>'+
+        '<div class="field"><label>¿Cómo te pagaron?</label>'+toggleHtml("f_method", [{v:"efectivo",label:"Efectivo (ya lo tienes)"},{v:"pendiente",label:"Quedó pendiente"}], method)+'</div>'+
+        '<div class="field" id="f_commission_wrap" style="'+(method!=="efectivo"?"display:none;":"")+'"><label>¿Te descontaron comisión de este viaje?</label>'+
+          '<input type="number" id="f_commission" value="'+esc(p && p.commission ? p.commission : "")+'" placeholder="0" inputmode="numeric">'+
+          '<div class="hint">Pasa cuando cobras en efectivo pero la app igual se queda con su comisión — te la resta del saldo pendiente. Revisa el detalle del viaje en la app si no estás seguro.</div>'+
+        '</div>';
+      wireToggle("f_method", function(v){ formState.method = v;
+        document.getElementById("f_commission_wrap").style.display = (v === "efectivo") ? "" : "none";
+      });
+    } else if (currentType === "gasto") {
+      var gmethod = p ? p.method : "efectivo";
+      var cat = p ? p.category : "gasolina";
+      formState = {method: gmethod};
+      el.innerHTML =
+        '<div class="field"><label>Categoría</label><select id="f_category">'+
+          ["gasolina","personal","mantenimiento","otro"].map(function(c){
+            var labels = {gasolina:"Gasolina", personal:"Personal / comida", mantenimiento:"Mantenimiento", otro:"Otro"};
+            return '<option value="'+c+'"'+(c===cat?" selected":"")+'>'+labels[c]+'</option>';
+          }).join("")+
+        '</select></div>'+
+        '<div class="field"><label>Monto</label><input type="number" id="f_amount" value="'+esc(amt)+'" placeholder="0" inputmode="numeric"></div>'+
+        '<div class="field"><label>¿Con qué pagaste?</label>'+toggleHtml("f_method", [{v:"efectivo",label:"Efectivo"},{v:"cuenta",label:"Cuenta / Nequi"}], gmethod)+'</div>';
+      wireToggle("f_method", function(v){ formState.method = v; });
+    } else if (currentType === "transferencia") {
+      var dir = p ? p.direction : "efectivo_a_cuenta";
+      formState = {direction: dir};
+      el.innerHTML =
+        '<div class="field"><label>Dirección</label>'+toggleHtml("f_dir", [{v:"efectivo_a_cuenta",label:"Efectivo → Cuenta"},{v:"cuenta_a_efectivo",label:"Cuenta → Efectivo"}], dir)+'</div>'+
+        '<div class="field"><label>Monto</label><input type="number" id="f_amount" value="'+esc(amt)+'" placeholder="0" inputmode="numeric"></div>';
+      wireToggle("f_dir", function(v){ formState.direction = v; });
+    } else if (currentType === "cobro_plataforma") {
+      var cmethod = p ? p.method : "efectivo";
+      formState = {method: cmethod};
+      el.innerHTML =
+        '<div class="field"><label>Plataforma</label><select id="f_platform">'+platformOptions(p ? p.platformId : (platforms[0] && platforms[0].id))+'</select></div>'+
+        '<div class="field"><label>Monto recibido</label><input type="number" id="f_amount" value="'+esc(amt)+'" placeholder="0" inputmode="numeric"></div>'+
+        '<div class="field"><label>¿Dónde te llegó?</label>'+toggleHtml("f_method", [{v:"efectivo",label:"Efectivo"},{v:"cuenta",label:"Cuenta / Nequi"}], cmethod)+'</div>'+
+        '<div class="hint" style="margin:-6px 0 4px;">Úsalo cuando la plataforma te paga lo que tenías pendiente (el corte semanal).</div>';
+      wireToggle("f_method", function(v){ formState.method = v; });
+    } else if (currentType === "ajuste") {
+      var adir = p ? p.direction : "debo_yo";
+      formState = {direction: adir};
+      el.innerHTML =
+        '<div class="field"><label>Plataforma</label><select id="f_platform">'+platformOptions(p ? p.platformId : (platforms[0] && platforms[0].id))+'</select></div>'+
+        '<div class="field"><label>¿Qué pasó?</label>'+toggleHtml("f_dir", [{v:"debo_yo",label:"Le debo yo a la app"},{v:"me_deben",label:"Me deben de más"}], adir)+'</div>'+
+        '<div class="field"><label>Monto</label><input type="number" id="f_amount" value="'+esc(amt)+'" placeholder="0" inputmode="numeric"></div>'+
+        '<div class="field"><label>Nota (opcional)</label><input type="text" id="f_note" value="'+esc(p && p.note ? p.note : "")+'" placeholder="ej. saldo que muestra la app"></div>'+
+        '<div class="hint" style="margin:-6px 0 4px;">Úsalo cuando la app te muestra un saldo a favor o en contra que no viene de un viaje puntual que ya registraste.</div>';
+      wireToggle("f_dir", function(v){ formState.direction = v; });
+    } else if (currentType === "arriendo_cuota") {
+      el.innerHTML = '<div class="field"><label>Monto de la cuota</label><input type="number" id="f_amount" value="'+esc(amt)+'" placeholder="0" inputmode="numeric"></div>';
+    } else if (currentType === "arriendo_pago") {
+      var rmethod = p ? p.method : "efectivo";
+      formState = {method: rmethod};
+      el.innerHTML =
+        '<div class="field"><label>Monto pagado</label><input type="number" id="f_amount" value="'+esc(amt)+'" placeholder="0" inputmode="numeric"></div>'+
+        '<div class="field"><label>¿Con qué pagaste?</label>'+toggleHtml("f_method", [{v:"efectivo",label:"Efectivo"},{v:"cuenta",label:"Cuenta / Nequi"}], rmethod)+'</div>';
+      wireToggle("f_method", function(v){ formState.method = v; });
+    } else if (currentType === "capital") {
+      var kmethod = p ? p.method : "efectivo";
+      formState = {method: kmethod};
+      el.innerHTML =
+        '<div class="field"><label>Monto</label><input type="number" id="f_amount" value="'+esc(amt)+'" placeholder="0" inputmode="numeric"></div>'+
+        '<div class="field"><label>¿En qué?</label>'+toggleHtml("f_method", [{v:"efectivo",label:"Efectivo"},{v:"cuenta",label:"Cuenta / Nequi"}], kmethod)+'</div>';
+      wireToggle("f_method", function(v){ formState.method = v; });
+    }
+  }
+
+  function wireToggle(id, cb){
+    var wrap = document.getElementById(id);
+    if (!wrap) return;
+    wrap.querySelectorAll("button").forEach(function(btn){
+      btn.onclick = function(){
+        haptic(8);
+        wrap.querySelectorAll("button").forEach(function(b){ b.classList.remove("active"); });
+        btn.classList.add("active"); cb(btn.getAttribute("data-v"));
+      };
+    });
+  }
+
+  document.getElementById("saveBtn").addEventListener("click", function(){
+    if (!db) { toast("No se pudo conectar el guardado"); return; }
+    var amountEl = document.getElementById("f_amount");
+    var amount = Number(amountEl ? amountEl.value : 0);
+    if (!amount || amount <= 0) { toast("Pon un monto válido"); return; }
+
+    var doc = { type: currentType, amount: amount };
+    if (!editingId) doc.ts = Date.now();
+
+    if (currentType === "ingreso") {
+      doc.platformId = document.getElementById("f_platform").value;
+      doc.method = formState.method === "pendiente" ? "pendiente" : "efectivo";
+      if (doc.method === "efectivo") {
+        var c = Number(document.getElementById("f_commission").value || 0);
+        doc.commission = c > 0 ? c : null;
+      } else {
+        doc.commission = null;
+      }
+    } else if (currentType === "gasto") {
+      doc.category = document.getElementById("f_category").value;
+      doc.method = formState.method || "efectivo";
+    } else if (currentType === "transferencia") {
+      doc.direction = formState.direction || "efectivo_a_cuenta";
+    } else if (currentType === "cobro_plataforma") {
+      doc.platformId = document.getElementById("f_platform").value;
+      doc.method = formState.method || "efectivo";
+    } else if (currentType === "ajuste") {
+      doc.platformId = document.getElementById("f_platform").value;
+      doc.direction = formState.direction || "debo_yo";
+      var noteEl = document.getElementById("f_note");
+      doc.note = noteEl && noteEl.value ? noteEl.value : null;
+    } else if (currentType === "arriendo_pago" || currentType === "capital") {
+      doc.method = formState.method || "efectivo";
+    }
+    // arriendo_cuota needs nothing extra
+
+    var ref = editingId ? db.collection("entries").doc(editingId) : db.collection("entries");
+    var op = editingId ? ref.update(doc) : ref.add(doc);
+    op.then(function(){
+      haptic(14);
+      toast(editingId ? "Cambios guardados" : "Guardado");
+      closeSheet();
+    }).catch(function(){ toast("No se pudo guardar"); });
+  });
+
+  // ---------- rent sheet ----------
+  var overlayRent = document.getElementById("overlayRent");
+  var sheetRent = document.getElementById("sheetRent");
+  var rentPayMethod = "efectivo";
+
+  var rentQuotaArmed = false, rentQuotaTimer = null;
+  var rentQuotaBtnEl = document.getElementById("rentQuotaBtn");
+  rentQuotaBtnEl.addEventListener("click", function(){
+    if (!db) { toast("No se pudo conectar el guardado"); return; }
+    var hasToday = entries.some(function(e){ return e.type === "arriendo_cuota" && dayGroupLabel(e.ts) === "Hoy"; });
+    if (hasToday && !rentQuotaArmed) {
+      rentQuotaArmed = true;
+      rentQuotaBtnEl.textContent = "Ya hay una hoy — ¿otra?";
+      rentQuotaBtnEl.classList.add("confirming");
+      clearTimeout(rentQuotaTimer);
+      rentQuotaTimer = setTimeout(function(){
+        rentQuotaArmed = false;
+        rentQuotaBtnEl.textContent = "+ Cuota del día";
+        rentQuotaBtnEl.classList.remove("confirming");
+      }, 2800);
+      return;
+    }
+    rentQuotaArmed = false; clearTimeout(rentQuotaTimer);
+    rentQuotaBtnEl.textContent = "+ Cuota del día";
+    rentQuotaBtnEl.classList.remove("confirming");
+    addRentQuota();
+  });
+  function addRentQuota(){
+    db.collection("entries").add({ type:"arriendo_cuota", ts: Date.now(), amount: settings.dailyRent || 35000 })
+      .then(function(){ toast("Cuota registrada"); })
+      .catch(function(){ toast("No se pudo guardar"); });
+  }
+  document.getElementById("rentPayBtn").addEventListener("click", function(){
+    document.getElementById("rentPayAmt").value = "";
+    overlayRent.classList.add("show"); sheetRent.classList.add("show");
+  });
+  overlayRent.addEventListener("click", function(){ overlayRent.classList.remove("show"); sheetRent.classList.remove("show"); });
+  document.getElementById("rentPayCancel").addEventListener("click", function(){ overlayRent.classList.remove("show"); sheetRent.classList.remove("show"); });
+  wireToggle("rentPayMethod", function(v){ rentPayMethod = v; });
+  document.getElementById("rentPaySave").addEventListener("click", function(){
+    if (!db) { toast("No se pudo conectar el guardado"); return; }
+    var amt = Number(document.getElementById("rentPayAmt").value || 0);
+    if (!amt || amt <= 0) { toast("Pon un monto válido"); return; }
+    db.collection("entries").add({ type:"arriendo_pago", ts: Date.now(), amount: amt, method: rentPayMethod })
+      .then(function(){ toast("Pago registrado"); overlayRent.classList.remove("show"); sheetRent.classList.remove("show"); })
+      .catch(function(){ toast("No se pudo guardar"); });
+  });
+
+  // ---------- settings sheet ----------
+  var overlaySettings = document.getElementById("overlaySettings");
+  var sheetSettings = document.getElementById("sheetSettings");
+  document.getElementById("settingsBtn").addEventListener("click", function(){
+    document.getElementById("dailyRentInput").value = settings.dailyRent || 35000;
+    renderPlatformEditList();
+    overlaySettings.classList.add("show"); sheetSettings.classList.add("show");
+  });
+  document.getElementById("settingsCloseBtn").addEventListener("click", closeSettings);
+  overlaySettings.addEventListener("click", closeSettings);
+  function closeSettings(){
+    var v = Number(document.getElementById("dailyRentInput").value || 0);
+    if (v > 0 && v !== settings.dailyRent && db) {
+      settings.dailyRent = v;
+      db.doc("settings/config").set({ dailyRent: v }).catch(function(){});
+    }
+    overlaySettings.classList.remove("show"); sheetSettings.classList.remove("show");
+  }
+
+  function renderPlatformEditList(){
+    var el = document.getElementById("platformEditList");
+    el.innerHTML = platforms.map(function(p){
+      var opts = ["", "lunes","martes","miércoles","jueves","viernes","sábado","domingo"].map(function(d){
+        var label = d === "" ? "Sin corte fijo" : ("Corte " + d);
+        return '<option value="'+d+'"'+(p.cutoffDay===d?" selected":"")+'>'+label+'</option>';
+      }).join("");
+      return '<div class="plat-row" data-id="'+p.id+'">'+
+        '<input type="text" class="p-name" value="'+esc(p.name)+'">'+
+        '<select class="p-cutoff">'+opts+'</select>'+
+        '<button class="del">🗑</button>'+
+      '</div>';
+    }).join("");
+    el.querySelectorAll(".plat-row").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      row.querySelector(".p-name").addEventListener("change", function(e){
+        if (db) db.collection("platforms").doc(id).update({ name: e.target.value }).catch(function(){});
+      });
+      row.querySelector(".p-cutoff").addEventListener("change", function(e){
+        if (db) db.collection("platforms").doc(id).update({ cutoffDay: e.target.value }).catch(function(){});
+      });
+      armConfirm(row.querySelector(".del"), "🗑", "¿Seguro?", function(){
+        if (db) db.collection("platforms").doc(id).delete().then(function(){
+          toast("Plataforma eliminada");
+        }).catch(function(){ toast("No se pudo eliminar"); });
+      });
+    });
+  }
+  document.getElementById("addPlatBtn").addEventListener("click", function(){
+    var name = document.getElementById("newPlatName").value.trim();
+    var cutoff = document.getElementById("newPlatCutoff").value;
+    if (!name) { toast("Ponle un nombre"); return; }
+    if (!db) { toast("No se pudo conectar"); return; }
+    db.collection("platforms").add({ name: name, cutoffDay: cutoff }).then(function(){
+      document.getElementById("newPlatName").value = "";
+      toast("Plataforma agregada");
+    }).catch(function(){ toast("No se pudo agregar"); });
+  });
+
+  var capMethodVal = "efectivo";
+  wireToggle("capMethod", function(v){ capMethodVal = v; });
+  document.getElementById("capSaveBtn").addEventListener("click", function(){
+    var amt = Number(document.getElementById("capAmt").value || 0);
+    if (!amt || amt <= 0) { toast("Pon un monto válido"); return; }
+    if (!db) { toast("No se pudo conectar"); return; }
+    db.collection("entries").add({ type:"capital", ts: Date.now(), amount: amt, method: capMethodVal }).then(function(){
+      document.getElementById("capAmt").value = "";
+      toast("Capital registrado");
+    }).catch(function(){ toast("No se pudo guardar"); });
+  });
+
+  // ---------- export ----------
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    if (!downloads) { toast("La exportación no está disponible aquí"); return; }
+    var rows = [["fecha","tipo","plataforma","monto","comisión","método/categoría/dirección","nota"]];
+    entries.slice().reverse().forEach(function(e){
+      rows.push([
+        new Date(e.ts).toISOString(),
+        e.type,
+        e.platformId ? platformName(e.platformId) : "",
+        e.amount,
+        e.commission || "",
+        e.method || e.category || e.direction || "",
+        e.note || ""
+      ]);
+    });
+    var csv = rows.map(function(r){
+      return r.map(function(v){ v = String(v); return /[",\n]/.test(v) ? ('"'+v.replace(/"/g,'""')+'"') : v; }).join(",");
+    }).join("\n");
+    downloads.save({ filename: "control-moto.csv", data: csv }).then(function(){
+      toast("Exportado");
+    }).catch(function(err){
+      if (err && err.code === "declined") return;
+      toast("No se pudo exportar");
+    });
+  });
+
+  // ---------- boot ----------
+  var seededPlatforms = false;
+  async function boot(){
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(function(){ /* offline ya quedó cacheado en la visita anterior */ });
+    }
+
+    var ok = await LocalDB.ready;
+    db = LocalDB;
+    downloads = LocalDownloads;
+
+    if (!ok) {
+      document.getElementById("app").innerHTML = '<div class="nodb">Este navegador no permite guardar datos localmente (IndexedDB bloqueado) — puede pasar en modo incógnito/privado.<br><br>Abre la app en una pestaña normal para que tus movimientos se guarden.</div>';
+      document.getElementById("fabBtn").style.display = "none";
+      return;
+    }
+
+    db.collection("platforms").orderBy("name").onSnapshot(function(snap){
+      platforms = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      if (!seededPlatforms && snap.docs.length === 0) {
+        seededPlatforms = true;
+        db.collection("platforms").add({ name:"Yango", cutoffDay:"lunes" }).catch(function(){});
+        db.collection("platforms").add({ name:"Didi", cutoffDay:"martes" }).catch(function(){});
+        db.collection("platforms").add({ name:"Particular", cutoffDay:"" }).catch(function(){});
+      }
+      render();
+    }, function(){ /* ignore */ });
+
+    db.collection("entries").orderBy("ts","desc").limit(500).onSnapshot(function(snap){
+      entries = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      render();
+    }, function(){ /* ignore */ });
+
+    db.doc("settings/config").onSnapshot(function(snap){
+      if (snap.exists) {
+        settings = Object.assign({dailyRent:35000}, snap.data());
+      } else if (!settingsDocReady) {
+        settingsDocReady = true;
+        db.doc("settings/config").set({ dailyRent: 35000 }).catch(function(){});
+      }
+      render();
+    }, function(){ /* ignore */ });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
