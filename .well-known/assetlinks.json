@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.sebasenrique70_rgb.twa",
+        "sha256_cert_fingerprints": ["DA:FC:A5:F2:9A:37:23:3D:EA:7A:23:B0:96:8D:B8:FD:7C:3A:B1:65:CA:C2:7B:DC:6A:9B:6A:FA:9E:FD:76:AD"]
+      }
+    }]
